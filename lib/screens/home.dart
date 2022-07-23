@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:todo_app/auth/logged_in_widget.dart';
 // ignore_for_file: prefer_const_constructors
 import 'add_task.dart';
 import 'description.dart';
@@ -35,6 +36,11 @@ class _HomeState extends State<Home> {
       appBar: AppBar(
         title: Text('TODO'),
         actions: [
+          IconButton(
+              icon: Icon(Icons.person),
+              onPressed: () async {
+               await Navigator.push(context, MaterialPageRoute(builder: (context)=>LoggedInWidget()));
+              }),
           IconButton(
               icon: Icon(Icons.logout),
               onPressed: () async {
@@ -78,7 +84,7 @@ class _HomeState extends State<Home> {
                     child: Container(
                       margin: EdgeInsets.only(bottom: 10),
                       decoration: BoxDecoration(
-                          color: Color(0xff121211),
+                          color: Color(0xffffffff),
                           borderRadius: BorderRadius.circular(10)),
                       height: 90,
                       child: Row(
