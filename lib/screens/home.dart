@@ -17,6 +17,10 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   String uid = '';
+  bool isDescending = false;
+  TextEditingController titleController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
+
   @override
   void initState() {
     getuid();
@@ -48,87 +52,159 @@ class _HomeState extends State<Home> {
               }),
         ],
       ),
-      body: Container(
-        padding: EdgeInsets.all(10),
-        height: MediaQuery.of(context).size.height,
-        width: MediaQuery.of(context).size.width,
-        child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('tasks')
-              .doc(uid)
-              .collection('mytasks')
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(
-                child: CircularProgressIndicator(),
-              );
-            } else {
-              final docs = snapshot.data!.docs;
+      body: Column(
+        children: [
+          TextButton.icon(
+            icon: RotatedBox(
+              quarterTurns: 1,
+              child: Icon(Icons.compare_arrows,size: 28,),
+            ),
+              label: Text(isDescending ? "Ascending" : "Descending",style: TextStyle(fontSize: 16),),
+              onPressed: ()=> setState(() {
+                isDescending = !isDescending;
+              }),
+          ),
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.all(10),
+              height: MediaQuery.of(context).size.height,
+              width: MediaQuery.of(context).size.width,
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('tasks')
+                    .doc(uid)
+                    .collection('mytasks')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  } else {
+                    final docs = snapshot.data!.docs;
 
-              return ListView.builder(
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  var time = (docs[index]['timestamp'] as Timestamp).toDate();
+                    return ListView.builder(
+                      reverse: isDescending,
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        var time = (docs[index]['timestamp'] as Timestamp).toDate();
 
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => Description(
-                                    title: docs[index]['title'],
-                                    description: docs[index]['description'],
-                                  )));
-                    },
-                    child: Container(
-                      margin: EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                          color: Color(0xffffffff),
-                          borderRadius: BorderRadius.circular(10)),
-                      height: 90,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        return InkWell(
+                          onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => Description(
+                                          title: docs[index]['title'],
+                                          description: docs[index]['description'],
+                                        )));
+                          },
+                          child: Container(
+                            margin: EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                                color: Color(0xffffffff),
+                                borderRadius: BorderRadius.circular(10)),
+                            height: 90,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                Container(
-                                    margin: EdgeInsets.only(left: 20),
-                                    child: Text(docs[index]['title'],
-                                        style:
-                                            GoogleFonts.roboto(fontSize: 20))),
-                                SizedBox(
-                                  height: 5,
-                                ),
-                                Container(
-                                    margin: EdgeInsets.only(left: 20),
-                                    child: Text(
-                                        DateFormat.yMd().add_jm().format(time)))
-                              ]),
-                          IconButton(
-                              icon: Icon(
-                                Icons.delete,
-                              ),
-                              onPressed: () async {
-                                await FirebaseFirestore.instance
-                                    .collection('tasks')
-                                    .doc(uid)
-                                    .collection('mytasks')
-                                    .doc(docs[index]['time'])
-                                    .delete();
-                              })
-                        ],
-                      ),
-                    ),
-                  );
+                                IconButton(
+                                    icon: Icon(
+                                      Icons.edit,
+                                    ),
+                                    onPressed: ()  {
+                                      titleController.text = docs[index]['title'];
+                                      descriptionController.text = docs[index]['description'];
+                                      showDialog(context: context, builder: (context) => Dialog(
+                                        child: Container(
+                                            padding: EdgeInsets.all(20),
+                                            child: ListView(
+                                              shrinkWrap: true,
+                                              children: [
+                                                TextField(
+                                                  controller: titleController,
+                                                  decoration: InputDecoration(
+                                                      labelText: 'Enter Title', border: OutlineInputBorder()),
+                                                ),
+                                                SizedBox(height: 10),
+                                                TextField(
+                                                  controller: descriptionController,
+                                                  decoration: InputDecoration(
+                                                      labelText: 'Enter Description',
+                                                      border: OutlineInputBorder()),
+                                                ),
+                                                SizedBox(height: 10),
+                                                SizedBox(
+                                                    width: double.infinity,
+                                                    height: 50,
+                                                    child: ElevatedButton(
+                                                      style: ButtonStyle(backgroundColor:
+                                                      MaterialStateProperty.resolveWith<Color>(
+                                                              (Set<MaterialState> states) {
+                                                            if (states.contains(MaterialState.pressed)) {
+                                                              return Colors.purple.shade100;
+                                                            }
+                                                            return Theme.of(context).primaryColor;
+                                                          })),
+                                                      child: Text(
+                                                        'Save',
+                                                        style: GoogleFonts.roboto(fontSize: 18),
+                                                      ),
+                                                      onPressed: () {
+                                                        snapshot.data?.docs[index].reference.update(
+                                                            {
+                                                              'title': titleController.text,
+                                                              'description': descriptionController.text,
+                                                              'time': time.toString(),
+                                                              'timestamp': time
+                                                            }).whenComplete(() => Navigator.pop(context));
+                                                      },
+                                                    ))
+                                              ],
+                                            )),
+                                      ));
+                                    }),
+                                Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                          margin: EdgeInsets.only(left: 20),
+                                          child: Text(docs[index]['title'],
+                                              style:
+                                                  GoogleFonts.roboto(fontSize: 20))),
+                                      SizedBox(
+                                        height: 5,
+                                      ),
+                                      Container(
+                                          margin: EdgeInsets.only(left: 20),
+                                          child: Text(
+                                              DateFormat.yMd().add_jm().format(time)))
+                                    ]),
+                                IconButton(
+                                    icon: Icon(
+                                      Icons.delete,
+                                    ),
+                                    onPressed: () async {
+                                      await FirebaseFirestore.instance
+                                          .collection('tasks')
+                                          .doc(uid)
+                                          .collection('mytasks')
+                                          .doc(docs[index]['time'])
+                                          .delete();
+                                    })
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }
                 },
-              );
-            }
-          },
-        ),
-        // color: Colors.red,
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
           backgroundColor: Theme.of(context).primaryColor,

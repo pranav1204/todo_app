@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
 // ignore_for_file: prefer_const_constructors
 
@@ -13,6 +12,7 @@ class AddTask extends StatefulWidget {
 }
 
 class _AddTaskState extends State<AddTask> {
+  DateTime dateTime = DateTime.now();
   TextEditingController titleController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
 
@@ -20,7 +20,7 @@ class _AddTaskState extends State<AddTask> {
     FirebaseAuth auth = FirebaseAuth.instance;
     final User? user = auth.currentUser;
     String uid = user!.uid;
-    var time = DateTime.now();
+    var time = dateTime;
     await FirebaseFirestore.instance
         .collection('tasks')
         .doc(uid)
@@ -32,8 +32,35 @@ class _AddTaskState extends State<AddTask> {
       'time': time.toString(),
       'timestamp': time
     });
-    Fluttertoast.showToast(msg: 'Data Added');
   }
+
+  Future pickDateTime() async {
+    DateTime? date = await pickDate();
+    if(date == null) return;
+
+    TimeOfDay? time = await pickTime();
+    if(time == null) return;
+
+    final dateTime = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    setState(() {
+      this.dateTime = dateTime;
+    });
+  }
+
+  Future pickDate() => showDatePicker(context: context,
+      initialDate: dateTime,
+      firstDate: DateTime(1950),
+      lastDate: DateTime(2100));
+
+  Future pickTime() => showTimePicker(context: context,
+      initialTime: TimeOfDay(hour: dateTime.hour, minute: dateTime.minute)
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +83,10 @@ class _AddTaskState extends State<AddTask> {
                     border: OutlineInputBorder()),
               ),
               SizedBox(height: 10),
+              ElevatedButton(
+                  onPressed: pickDateTime,
+                  child: Text('$dateTime')
+              ),
               SizedBox(
                   width: double.infinity,
                   height: 50,
